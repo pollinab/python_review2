@@ -17,17 +17,23 @@ cursor.execute("""CREATE TABLE if not exists trips
 def new_trip():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT trip_id FROM trips WHERE trip_id = ?",
-                   [request.form['id']])
+    new_id = request.form.get('id')
+    if new_id is None:
+        for row in cursor.execute("SELECT COALESCE(max(trip_id), 0) FROM trips"):
+            new_id = int(row[0]) + 1
+    else:
+        cursor.execute("SELECT trip_id FROM trips WHERE trip_id = ?",
+                       [request.form['id']])
     if cursor.fetchone() is None:
-        trip = (request.form['id'], request.form['city'],
+        trip = (new_id, request.form['city'],
                 request.form['departure'], request.form['arrival'])
         cursor.execute("INSERT INTO trips VALUES (?, ?, ?, ?)", trip)
         conn.commit()
         conn.close()
-        return 'OK'
+        return 'The assigned id: {}'.format(new_id)
+
     conn.close()
-    return 'ERROR: this id already exists'
+    raise IndexError('This id already exists')
 
 
 @app.route('/update_trip', methods=['POST'])
@@ -37,7 +43,7 @@ def update_trip():
     cursor.execute("SELECT trip_id FROM trips WHERE trip_id = ?",
                    [request.form['id']])
     if cursor.fetchone() is None:
-        return 'ERROR: id not found'
+        raise IndexError('Id not found')
     if request.form.get('city') is not None:
         cursor.execute("UPDATE trips SET city = ? WHERE trip_id = ?",
                        (request.form['city'], request.form['id']))
@@ -72,7 +78,7 @@ def show_trip():
     trip = cursor.fetchone()
     conn.close()
     if trip is None:
-        return 'ERROR: id not found'
+        raise IndexError('Id not found')
     keys = ('trip_id', 'city', 'departure', 'arrival')
     return flask.jsonify(dict(zip(keys, trip)))
 
