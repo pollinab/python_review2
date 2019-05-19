@@ -25,7 +25,7 @@ delete_parser.set_defaults(method='delete')
 find_parser.set_defaults(method='find')
 show_parser.set_defaults(method='show')
 
-add_parser.add_argument('--trip-id', required=True)
+add_parser.add_argument('--trip-id', type=int)
 add_parser.add_argument('--city', required=True)
 add_parser.add_argument('--departure', required=True,
                         help='The first day - format DD/MM/YYYY',
@@ -34,7 +34,7 @@ add_parser.add_argument('--arrival', required=True,
                         help='The last day - format DD/MM/YYYY',
                         type=lambda s: datetime.strptime(s, '%d/%m/%Y').date())
 
-update_parser.add_argument('--trip-id', required=True)
+update_parser.add_argument('--trip-id', type=int,  required=True)
 update_parser.add_argument('--city')
 update_parser.add_argument('--departure',
                            help='The first day - format DD/MM/YYYY',
@@ -43,9 +43,9 @@ update_parser.add_argument('--arrival',
                            help='The last day - format DD/MM/YYYY',
                            type=lambda s: datetime.strptime(s, '%d/%m/%Y').date())
 
-delete_parser.add_argument('--trip-id', required=True)
+delete_parser.add_argument('--trip-id', type=int, required=True)
 
-show_parser.add_argument('--trip-id', required=True)
+show_parser.add_argument('--trip-id', type=int, required=True)
 
 find_parser.add_argument('--city', help='Destination')
 find_parser.add_argument('--departure',
@@ -62,45 +62,48 @@ port = start_args.port
 while True:
     input_line = input().split()
     args = parser.parse_args(input_line)
-    if args.method == 'exit':
-        break
-    if args.method == 'add':
-        parameters = {'id': args.trip_id, 'city': args.city,
-                      'departure': args.departure, 'arrival': args.arrival}
-        result = requests.post('http://{}:{}/add_trip'.format(host, port),
-                               data=parameters)
-        print(result.text)
-    elif args.method == 'show':
-        parameters = {'id': args.trip_id}
-        result = requests.get('http://{}:{}/show_trip'.format(host, port),
-                              data=parameters)
-        try:
-            result = json.loads(result.content)
-            keys = ('trip_id', 'city', 'departure', 'arrival')
-            for key in keys:
-                print(key, result[key])
-        except:
+    try:
+        if args.method == 'exit':
+            break
+        if args.method == 'add':
+            parameters = {'id': args.trip_id, 'city': args.city,
+                          'departure': args.departure, 'arrival': args.arrival}
+            result = requests.post('http://{}:{}/add_trip'.format(host, port),
+                                   data=parameters)
             print(result.text)
-    elif args.method == 'update':
-        parameters = {'id': args.trip_id, 'city': args.city,
-                      'departure': args.departure, 'arrival': args.arrival}
-        result = requests.post('http://{}:{}/update_trip'.format(host, port),
-                               data=parameters)
-        print(result.text)
-    elif args.method == 'delete':
-        parameters = {'id': args.trip_id}
-        result = requests.post('http://{}:{}/delete_trip'.format(host, port),
-                               data=parameters)
-        print(result.text)
-    elif args.method == 'find':
-        parameters = {'city': args.city, 'departure': args.departure,
-                      'arrival': args.arrival}
-        result = requests.get('http://{}:{}/find_trip'.format(host, port),
-                              data=parameters)
-        try:
-            result = json.loads(result.content)
-            for value in result.values():
-                print('\ntrip id  {}\ncity  {}\ndeparture {}\narrival {}'.format(
-                    value[0], value[1], value[2], value[3]))
-        except:
+        elif args.method == 'show':
+            parameters = {'id': args.trip_id}
+            result = requests.get('http://{}:{}/show_trip'.format(host, port),
+                                  data=parameters)
+            try:
+                result = json.loads(result.text)
+                keys = ('trip_id', 'city', 'departure', 'arrival')
+                for key in keys:
+                    print(key, result[key])
+            except json.decoder.JSONDecodeError:
+                print(result.text)
+        elif args.method == 'update':
+            parameters = {'id': args.trip_id, 'city': args.city,
+                          'departure': args.departure, 'arrival': args.arrival}
+            result = requests.post('http://{}:{}/update_trip'.format(host, port),
+                                   data=parameters)
             print(result.text)
+        elif args.method == 'delete':
+            parameters = {'id': args.trip_id}
+            result = requests.post('http://{}:{}/delete_trip'.format(host, port),
+                                   data=parameters)
+            print(result.text)
+        elif args.method == 'find':
+            parameters = {'city': args.city, 'departure': args.departure,
+                          'arrival': args.arrival}
+            result = requests.get('http://{}:{}/find_trip'.format(host, port),
+                                  data=parameters)
+            try:
+                result = json.loads(result.text)
+                for value in result.values():
+                    print('\ntrip id  {}\ncity  {}\ndeparture {}\narrival {}'.format(
+                        value[0], value[1], value[2], value[3]))
+            except json.decoder.JSONDecodeError:
+                print(result.text)
+    except Exception as ex:
+        print(type(ex).__name__)
